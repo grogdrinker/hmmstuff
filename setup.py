@@ -11,7 +11,7 @@ setup(
      zip_safe=False,
      include_package_data=True,
 
-     version='0.0.1',
+     version='0.0.2',
 
      author="Gabriele Orlando",
 
@@ -35,7 +35,7 @@ setup(
                     "HMMSTUFF.models.6Z1I":'HMMSTUFF/models/6Z1I',
                     "HMMSTUFF.models.8CPE":'HMMSTUFF/models/8CPE',
                   },
-     package_data={'HMMSTUFF': ['models/6HUD/*','models/6IC3/*','models/6Z1O/*','models/7NSL/*','models/6Z1I/*','models/8CPE/*','templates/*']},
+     package_data={'HMMSTUFF': ["logo.jpg",'models/6HUD/*','models/6IC3/*','models/6Z1O/*','models/7NSL/*','models/6Z1I/*','models/8CPE/*','templates/*']},
 
      #packages = find_packages( include = ["models/*","templates/*"]),  # Includes models and all sub-packages
 

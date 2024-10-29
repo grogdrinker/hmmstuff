@@ -737,23 +737,23 @@ class HMMSTUFF:
             results["best_template_name"] = None
             return results
 
-    def predict_structure(self,sequence,template_folder = WORKING_DIR+"/templates/",outfile = "outpdb.pdb",tmp_folder=os.getcwd()+"/foldX_tmp/",foldx_bin="foldx" ):
+    def predict_structure(self,sequence,name,template_folder = WORKING_DIR+"/templates/",outfile = "outpdb.pdb",tmp_folder=os.getcwd()+"/foldX_tmp/",foldx_bin="foldx" ):
         template = self.get_template(sequence)
         results = {}
 
         if template["best_template_name"] is None:
-            print("No template available for the sequence! No similar LC amyloid structure is known")
+            print("No template available for "+name+"! No similar LC amyloid structure is known")
             template["energy"] = None
             template["pdb_file"] = None
             return template
 
         elif not template["doable"]:
-            print("The best template is ",template["best_template_name"], "but it is not good enough to make the structure due to gaps in the alignment")
+            print("The best template for  "+name+" is ",template["best_template_name"], "but it is not good enough to make the structure")
             template["energy"] = None
             template["pdb_file"] = None
             return template
         else:
-            print("The best template is ",template["best_template_name"], "running structural prediction, it might take some time...")
+            print("The best template for "+name+" is ",template["best_template_name"], "running structural prediction, it might take some time...")
             alignmentSeq,alignmentTem = template["substrings"]
 
             templatePDB = template_folder+template["best_template_name"]+".pdb"
@@ -788,7 +788,6 @@ class HMMSTUFF:
         final = {}
 
         if ncpus>1:
-            print("running multicore")
             args = []
             for k in range(len(seq_ids)):
                 args += [(sequences_input[k],seq_ids[k])]
@@ -800,9 +799,7 @@ class HMMSTUFF:
             for k in range(len(seq_ids)):
                 final[seq_ids[k]] = res[k]
         else:
-            print("running single core")
             for k in range(len(seq_ids)):
-                print("starting",seq_ids[k])
                 final[seq_ids[k]] = self.evaluate_sequence(sequences_input[k],seq_ids[k])
 
         return final
@@ -815,9 +812,11 @@ class HMMSTUFF:
             os.makedirs(folder_out_pdbs)
         ncpus = 1
         if ncpus>1:
+            print("Running structure prediction in multicore...")
             args = []
             for k in range(len(seq_ids)):
                 args += [(sequences_input[k],
+                          seq_ids[k],
                           template_folder,
                           folder_out_pdbs+seq_ids[k]+".pdb",
                           tmp_folder,
@@ -830,10 +829,9 @@ class HMMSTUFF:
             for k in range(len(seq_ids)):
                 final[seq_ids[k]] = res[k]
         else:
-            print("running single core")
+            print("Running structure prediction in single core...")
             for k in range(len(seq_ids)):
-                print("starting",seq_ids[k])
-                final[seq_ids[k]] = self.predict_structure(sequences_input[k], template_folder, folder_out_pdbs+seq_ids[k]+".pdb", tmp_folder,foldx_bin)
+                final[seq_ids[k]] = self.predict_structure(sequences_input[k],seq_ids[k], template_folder, folder_out_pdbs+seq_ids[k]+".pdb", tmp_folder,foldx_bin)
 
         return final
 
