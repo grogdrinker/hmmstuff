@@ -1,4 +1,4 @@
-![logo](logo.jpg)
+![logo](HMMSTUFF/logo.jpg)
 
 ---
 
