@@ -7,7 +7,7 @@
 HMMSTUFF is a tool to help researchers to make the best use of the limited data available about light chain amyloids.
 Given a light chain amyloid, it tells you if there is a similar chain with experimentally solved structure.
 
-If you use chaHMMSTUFFplin in your research, please consider citing:
+If you use HMMSTUFF in your research, please consider citing:
 
 
 ## Installation
@@ -21,7 +21,7 @@ A foldX binary, which can be downloaded from https://foldxsuite.crg.eu/, is requ
 We suggest to create a local conda environment where to install chaplin. it can be done with:
 
 ```sh
-conda create -n hmmstuff python=3.9
+conda create -n hmmstuff python=3.7
 ```
 and activated with
 
