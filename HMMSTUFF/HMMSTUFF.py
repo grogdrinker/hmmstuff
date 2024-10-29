@@ -2,9 +2,8 @@ import multiprocessing
 import random
 import math,pickle,sklearn,os
 import numpy as np
-import utils
 from pomegranate import DiscreteDistribution,State,HiddenMarkovModel
-import structure_generation
+from HMMSTUFF import structure_generation
 SEED = 42
 random.seed(SEED)
 WORKING_DIR = "/".join(os.path.realpath(__file__).split("/")[:-1])+"/"
@@ -15,23 +14,10 @@ class hmm_model:
         self.hash = {'A': 0, 'C': 1, 'D': 2, 'E': 3, 'F': 4, 'G': 5, 'H': 6, 'I': 7, 'K': 8, 'L': 9, 'M': 10, 'N': 11, 'P': 12, 'Q': 13, 'R': 14, 'S': 15, 'T': 16, 'V': 17, 'W': 18, 'Y': 19, "X":20}
         self.missing = self.hash["X"]
 
-        if ".pdb" in input and not sequence_only:
-            ### structure based ###
-            utils.build_all_Foldx_PSSMs(dataset="dataset/repairedPDB/")
-            self.pssm, self.template_sequence = utils.calculate_PSSM_foldxSequenceMix(input)
-            self.name = name
-
-        elif  ".pdb" in input and sequence_only:
-            _, self.template_sequence, _ = utils.get_PSSM_residues(input)
-            self.template_sequence = self.template_sequence.strip("-")
-            self.annotationCDR = annot
-            self.pssm = None
-            self.name = name
-        else:
-            self.annotationCDR = annot
-            self.template_sequence = input.strip("-")
-            self.pssm = None
-            self.name = name
+        self.annotationCDR = annot
+        self.template_sequence = input.strip("-")
+        self.pssm = None
+        self.name = name
         self.model = self.build_hmm(self.template_sequence,self.annotationCDR)
 
 
@@ -579,26 +565,18 @@ def align_sequencesFromStates(states, sequence, template_sequence):
 class HMMSTUFF:
     def __init__(self):
         self.models = {}
+        self.load()
 
-    def load(self,modelsFolder=WORKING_DIR+"marshalled/"):
+    def load(self,modelsFolder=WORKING_DIR+"models/"):
 
         for template in os.listdir(modelsFolder):
-            self.models[template.replace(".m","")] = pickle.load(open(modelsFolder+"/"+template, "rb"))
-        return True
-
-    def fit(self,training_fasta_file= WORKING_DIR+"dataset/AL_sequences_RGT_to_af.fasta",cdr_annotations=WORKING_DIR+"dataset/anotated_CDRs.txt",modelsFolder = WORKING_DIR+"marshalled/"):
-        sequences = utils.leggifasta(training_fasta_file)
-        annotSequences = utils.readCdrAnnot(cdr_annotations)
-        print("FITTING THE MODELS!")
-        for template in annotSequences.keys():
-            print("startigng", template)
-            seq = annotSequences[template][0]
-            annot = annotSequences[template][1]
-
-            model = hmm_model(seq, annot, sequence_only=True, name=template)
-            model.fit(sequences)
-            model.fit_scaler(sequences)
-            pickle.dump(model, open(modelsFolder + template + ".m", "wb"))
+            model_name = template.replace(".m","")
+            annotationCDR = pickle.load(open(modelsFolder+model_name+"/annotationCDR.m","rb"))
+            template_sequence = pickle.load(open(modelsFolder+model_name+"/template_sequence.m","rb"))
+            model = hmm_model(template_sequence, annotationCDR)
+            model.model = pickle.load(open(modelsFolder+model_name+"/model.m","rb"))
+            model.scaler = pickle.load(open(modelsFolder+model_name+"/scaler.m","rb"))
+            self.models[model_name] = model
 
         return True
 
@@ -639,7 +617,6 @@ class HMMSTUFF:
         return final
     def get_template(self,sequence):
         results = {}
-        # sequences = utils.leggifasta("dataset/full_sequences.fasta")
         best_score = None
         best_doable = False
         best_template = None
@@ -706,6 +683,9 @@ class HMMSTUFF:
                 best_score = score
                 best_doable = doable
                 best_template = modelID
+                if doable:
+                    best_temSubstring = temSubstring
+                    best_seqSubstring = seqSubstring
 
             elif (best_score is not None) and not best_doable:
                 # not duable best template
@@ -757,7 +737,7 @@ class HMMSTUFF:
             results["best_template_name"] = None
             return results
 
-    def predict_structure(self,sequence,template_folder = WORKING_DIR+"dataset/repairedPDB/",outfile = "outpdb.pdb",tmp_folder=os.getcwd()+"/foldX_tmp/" ):
+    def predict_structure(self,sequence,template_folder = WORKING_DIR+"/templates/",outfile = "outpdb.pdb",tmp_folder=os.getcwd()+"/foldX_tmp/",foldx_bin="foldx" ):
         template = self.get_template(sequence)
         results = {}
 
@@ -773,32 +753,32 @@ class HMMSTUFF:
             template["pdb_file"] = None
             return template
         else:
-            print("The best template is ",template["best_template_name"], "running structural prediction")
+            print("The best template is ",template["best_template_name"], "running structural prediction, it might take some time...")
             alignmentSeq,alignmentTem = template["substrings"]
 
             templatePDB = template_folder+template["best_template_name"]+".pdb"
-            energy = structure_generation.predict_structure(alignmentSeq,alignmentTem,template["template_sequence"].replace("-",""),templatePDB, outFile=outfile ,tmp_folder=tmp_folder)
+            energy = structure_generation.predict_structure(alignmentSeq,alignmentTem,template["template_sequence"].replace("-",""),templatePDB, outFile=outfile ,tmp_folder=tmp_folder,foldx_bin=foldx_bin)
 
             template["energy"] = energy
             template["pdb_file"] = outfile
 
             return template
 
-    def evaluate_sequence(self, sequence):
+    def evaluate_sequence(self, sequence,name):
         template = self.get_template(sequence)
         results = {}
 
         if template["best_template_name"] is None:
-            print("No template available for the sequence! No similar LC amyloid structure is known")
+            print("No template available for "+name+"! No similar LC amyloid structure is known")
 
             return template
 
         elif not template["doable"]:
-            print("The best template is ",template["best_template_name"], "but it is not good enough to make the structure due to gaps in the alignment")
+            print("The best template for "+name+" is ",template["best_template_name"], "but it is not good enough to make the structure due to gaps in the alignment")
 
             return template
         else:
-            print("The best template is ",template["best_template_name"], "running structural prediction")
+            print("The best template for "+name+" is ",template["best_template_name"])
 
             return template
 
@@ -811,7 +791,7 @@ class HMMSTUFF:
             print("running multicore")
             args = []
             for k in range(len(seq_ids)):
-                args += [(sequences_input[k],)]
+                args += [(sequences_input[k],seq_ids[k])]
 
             with multiprocessing.Pool(processes=ncpus) as pool:
 
@@ -823,25 +803,25 @@ class HMMSTUFF:
             print("running single core")
             for k in range(len(seq_ids)):
                 print("starting",seq_ids[k])
-                final[seq_ids[k]] = self.evaluate_sequence(sequences_input[k])
+                final[seq_ids[k]] = self.evaluate_sequence(sequences_input[k],seq_ids[k])
 
         return final
-    def predict_structures(self,sequences, template_folder = WORKING_DIR+"dataset/repairedPDB/", folder_out_pdbs = os.getcwd()+"/PDB_out/",ncpus = multiprocessing.cpu_count(),tmp_folder=os.getcwd()+"/foldX_tmp/" ):
+    def predict_structures(self,sequences, template_folder = WORKING_DIR+"/templates/", folder_out_pdbs = os.getcwd()+"/PDB_out/",ncpus = multiprocessing.cpu_count(),tmp_folder=os.getcwd()+"/foldX_tmp/",foldx_bin="foldx" ):
         seq_ids = list(sequences.keys())
         sequences_input = [sequences[k] for k in seq_ids]
         final = {}
 
         if not os.path.exists(folder_out_pdbs):
             os.makedirs(folder_out_pdbs)
-
+        ncpus = 1
         if ncpus>1:
-            print("running multicore")
             args = []
             for k in range(len(seq_ids)):
                 args += [(sequences_input[k],
                           template_folder,
                           folder_out_pdbs+seq_ids[k]+".pdb",
-                          tmp_folder)]
+                          tmp_folder,
+                          foldx_bin)]
 
             with multiprocessing.Pool(processes=ncpus) as pool:
 
@@ -853,7 +833,7 @@ class HMMSTUFF:
             print("running single core")
             for k in range(len(seq_ids)):
                 print("starting",seq_ids[k])
-                final[seq_ids[k]] = self.predict_structure(sequences_input[k], template_folder, folder_out_pdbs+seq_ids[k]+".pdb", tmp_folder)
+                final[seq_ids[k]] = self.predict_structure(sequences_input[k], template_folder, folder_out_pdbs+seq_ids[k]+".pdb", tmp_folder,foldx_bin)
 
         return final
 
