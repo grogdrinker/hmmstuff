@@ -18,7 +18,7 @@ A foldX binary, which can be downloaded from https://foldxsuite.crg.eu/, is requ
 
 ### Installing HMMSTUFF with pip:
 
-We suggest to create a local conda environment where to install chaplin. it can be done with:
+We suggest to create a local conda environment where to install HMMSTUFF. it can be done with:
 
 ```sh
 conda create -n hmmstuff python=3.7
@@ -43,7 +43,7 @@ pip install hmmstuff
 
 The procedure will install hmmstuff in your computer.
 
-### Installing chaplin from source:
+### Installing HMMSTUFF from source:
 
 If you want to install hmmstuff from this repository, you need to install the dependencies first.
 
@@ -57,7 +57,7 @@ Finally, you can clone the repository with the following command:
 git clone https://github.com/grogdrinker/hmmstuff/
 ```
 
-## Using chaplin into a python script
+## Using HMMSTUFF into a python script
 
 the pip installation will install a python library that is directly usable (at least on linux and mac. Most probably on windows as well if you use a conda environemnt).
 
