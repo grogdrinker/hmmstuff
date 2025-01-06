@@ -810,7 +810,6 @@ class HMMSTUFF:
 
         if not os.path.exists(folder_out_pdbs):
             os.makedirs(folder_out_pdbs)
-        ncpus = 1
         if ncpus>1:
             print("Running structure prediction in multicore...")
             args = []

@@ -131,7 +131,7 @@ def run_foldx(mut_list,outTemplate,tmp_folder,outFile,foldx_bin):
         try:
             energy = parse_buildmodel_energy(tmp_folder + name+"/"+"Dif_"+name+".fxout")
         except:
-            raise(ValueError,"FoldX failed to run. Check if it runs correctly")
+            raise ValueError("FoldX failed to run. Check if it runs correctly")
         os.system("mv "+ tmp_folder + name+"/"+name+"_1.pdb"+" "+outFile)
         os.system('rm -r ' + tmp_folder + name)
         os.system("rm "+tmp_folder+'individual_list_' + name + '.tmp')
